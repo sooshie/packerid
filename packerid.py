@@ -72,7 +72,7 @@ for file in vars(args)['files']:
             for m in matches:
                 t.add(m[0])
             print "\t" + ", ".join(t)
-    else:
+    elif not args.terse:
         matches = signatures.match(pe, ep_only = True)
         print matches[0]
 
