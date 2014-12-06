@@ -23,7 +23,7 @@
 # 2009-05-15 - added some error handling as recommended by Joerg Hufschmidt
 #
 # 2014-12-03 - incremented to 1.5, sig extraction, moved over to Argument Parser and created terse output - sooshie@gmail.com
-# 2014-12-05 - dissassembly support with capstone-engine.org, 32bit for now. 
+# 2014-12-05 - disassembly support with capstone-engine.org, 32bit for now. 
 #              JSON output, updates to the args for more control over output - sooshie@gmail.com
 
 import pefile

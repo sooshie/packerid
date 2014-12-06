@@ -1,6 +1,6 @@
 Fork of packerid.py
 
-Added some functionality that might be useful.
+Additional output types, and formats, digital signature extraction, and disassembly support
 
 Added a userdb.txt that I put together because who doesn't need another one.
 
@@ -13,3 +13,7 @@ to
 <code>if '?' in value:</code>
 <br/>
 to get the included userdb.txt file to load correctly.
+
+requires:<br/>
+* <a href="https://code.google.com/p/pefile/">pefile</a>
+* <a href="http://www.capstone-engine.org/">Capstone</a>
