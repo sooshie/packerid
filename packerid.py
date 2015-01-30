@@ -250,8 +250,14 @@ def main():
             ep = pe.OPTIONAL_HEADER.AddressOfEntryPoint
             ep_ava = ep+pe.OPTIONAL_HEADER.ImageBase
             data = pe.get_memory_mapped_image()[ep:ep+args.disasm]
-            #md = Cs(CS_ARCH_X86, CS_MODE_64) # Uncomment for 64bit instead of 32, maybe a cli option to come
-            md = Cs(CS_ARCH_X86, CS_MODE_32)
+            #
+            # Determine if the file is 32bit or 64bit
+            #
+            mode = CS_MODE_32
+            if pe.OPTIONAL_HEADER.Magic == 0x20b:
+                mode = CS_MODE_64
+
+            md = Cs(CS_ARCH_X86, mode)
             for (address, size, mnemonic, op_str) in md.disasm_lite(data, 0x1000):
                 if json_out: 
                     t = {}
