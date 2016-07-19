@@ -41,8 +41,8 @@ def get_sig(filename, pe, extract):
     if address == 0:
         return None
 
+    retval = []
     if extract:
-        retval = []
         with open(filename + ".der", 'wb+') as out:
             offset = address+8
             out.write(pe.write()[offset:offset+size])
