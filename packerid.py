@@ -31,22 +31,21 @@ import peutils
 import time
 import json
 import sys
+import base64
 from capstone import *
 from argparse import ArgumentParser
 
 def get_sig(filename, pe, extract):
     address = pe.OPTIONAL_HEADER.DATA_DIRECTORY[pefile.DIRECTORY_ENTRY['IMAGE_DIRECTORY_ENTRY_SECURITY']].VirtualAddress
     size = size = pe.OPTIONAL_HEADER.DATA_DIRECTORY[pefile.DIRECTORY_ENTRY['IMAGE_DIRECTORY_ENTRY_SECURITY']].Size
-
     if address == 0:
         return None
-
     retval = []
     if extract:
         with open(filename + ".der", 'wb+') as out:
             offset = address+8
             out.write(pe.write()[offset:offset+size])
-            retval.append("\t%s %s %s.der" %(hex(address), size, filename))
+            retval.append("\t{} {} {}.der".format(hex(address), size, filename))
     else:
         retval.append("\t%s %s" %(hex(address), size))
     return retval
@@ -80,14 +79,13 @@ def main():
     args = parser.parse_args()
     
     if args.version:
-        print "Packerid.py version ",version,"\n Copyright (c) 2007, Jim Clausing, forked by Sconzo"
+        print("Packerid.py version ",version,"\n Copyright (c) 2007, Jim Clausing, forked by Sconzo")
         sys.exit(0)
 
     if args.alt_db and (args.peid | args.show_all | args.show_matches):
         signatures = peutils.SignatureDatabase(args.alt_db)
     elif (args.peid | args.show_all | args.show_matches):
         signatures = peutils.SignatureDatabase('/usr/local/etc/userdb.txt')
-
     json_out = False
     if args.json_out:
         json_out = True
@@ -106,36 +104,35 @@ def main():
                 matches = signatures.match_all(pe, ep_only = True)
                 t = []
                 if matches == None or len(matches) == 0:
-                    if not json_out: print "None"
+                    if not json_out: print("None")
                 else:
                     t = set()
                     for m in matches:
                         t.add(m[0])
                     if json_out: j_output['PEid'] = t
-                    else: print "\t" + ", ".join(t)
+                    else: print("\t" + ", ".join(t))
             elif args.peid:
                 matches = signatures.match(pe, ep_only = True)
                 if matches == None:
-                    if not json_out: print "None"
+                    if not json_out: print("None")
                 else:
                     if json_out: j_output['PEid'] = matches[0]
-                    else: print matches[0]
+                    else: print(matches[0])
     
         if args.show_all:
-            print pe.dump_info()
-    
+            print(pe.dump_info())    
         if args.terse:
             if args.peid:
                 matches = signatures.match_all(pe, ep_only = True)
                 if matches == None or len(matches) == 0:
                     if json_out: j_output['PEiD'] = ["None"]
-                    else: print "PEiD\n\tNone"
+                    else: print("PEiD\n\tNone")
                 else:
                     t = set()
                     for m in matches:
                         t.add(m[0])
                     if json_out: j_output['PEiD'] = t 
-                    else: print "PEiD\n\t" + ", ".join(t)
+                    else: print("PEiD\n\t" + ", ".join(t))
    
             if json_out:
                 j_output['Entry Point Address'] = hex(pe.OPTIONAL_HEADER.AddressOfEntryPoint)
@@ -147,79 +144,79 @@ def main():
                 j_output['OS Version']['Major'] = pe.OPTIONAL_HEADER.MajorOperatingSystemVersion
                 j_output['OS Version']['Minor'] = pe.OPTIONAL_HEADER.MinorOperatingSystemVersion 
             else:
-                print "Entry Point Address\n\t%s" %(hex(pe.OPTIONAL_HEADER.AddressOfEntryPoint))
-                print "Image Base Address\n\t%s" %(hex(pe.OPTIONAL_HEADER.ImageBase))
-                print "Linker Version\n\t%d.%d" %(pe.OPTIONAL_HEADER.MajorLinkerVersion,pe.OPTIONAL_HEADER.MinorLinkerVersion)
-                print "OS Version\n\t%d.%d" %(pe.OPTIONAL_HEADER.MajorOperatingSystemVersion,pe.OPTIONAL_HEADER.MinorOperatingSystemVersion)
+                print("Entry Point Address\n\t{}".format(hex(pe.OPTIONAL_HEADER.AddressOfEntryPoint)))
+                print("Image Base Address\n\t{}".format(hex(pe.OPTIONAL_HEADER.ImageBase)))
+                print("Linker Version\n\t{}.{}".format(pe.OPTIONAL_HEADER.MajorLinkerVersion,pe.OPTIONAL_HEADER.MinorLinkerVersion))
+                print("OS Version\n\t{}.{}".format(pe.OPTIONAL_HEADER.MajorOperatingSystemVersion,pe.OPTIONAL_HEADER.MinorOperatingSystemVersion))
 
             if pe.FILE_HEADER.Machine == 0x14c: 
                 if json_out: j_output['Machine'] = 'x86'
-                else: print "Machine\n\tx86"
+                else: print("Machine\n\tx86")
             elif pe.FILE_HEADER.Machine == 0x14d:
                 if json_out: j_output['Machine'] = '486'
-                else: print "Machine\n\t486"
+                else: print("Machine\n\t486")
             elif pe.FILE_HEADER.Machine == 0x14e:
                 if json_out: j_output['Machine'] = 'Pentium'
-                else: print "Machine\n\tPentium"
+                else: print("Machine\n\tPentium")
             elif pe.FILE_HEADER.Machine == 0x0200:
                 if json_out: j_output['Machine'] = 'AMD64 only'
-                else: print "Machine\n\tAMD64 only\n"
+                else: print("Machine\n\tAMD64 only\n")
             elif pe.FILE_HEADER.Machine == 0x8664:
                 if json_out: j_output['Machine'] = '64b'
-                else: print "Machine\n\t64b"
+                else: print("Machine\n\t64b")
             else:
                 if json_out: j_output['Machine'] = 'Unknown'
-                else: print "Machine\n\tUnknown"
+                else: print("Machine\n\tUnknown")
 
             try:
                if json_out: j_output['Compile Time'] = "%s UTC" %(time.asctime(time.gmtime(pe.FILE_HEADER.TimeDateStamp))) 
-               else: print 'Compile Time\n\t%s UTC' %(time.asctime(time.gmtime(pe.FILE_HEADER.TimeDateStamp)))
-            except ValueError, e:
-               if json_out: j_output['Compile Time'] = "Invalid Time" %(time.asctime(time.gmtime(pe.FILE_HEADER.TimeDateStamp))) 
-               else: print 'Compile Time\n\tInvalid Time' %(time.asctime(time.gmtime(pe.FILE_HEADER.TimeDateStamp)))
+               else: print('Compile Time\n\t{} UTC'.format(time.asctime(time.gmtime(pe.FILE_HEADER.TimeDateStamp))))
+            except ValueError as e:
+               if json_out: j_output['Compile Time'] = "Invalid Time{}".format(time.asctime(time.gmtime(pe.FILE_HEADER.TimeDateStamp))) 
+               else: print('Compile Time\n\tInvalid Time {}'.format(time.asctime(time.gmtime(pe.FILE_HEADER.TimeDateStamp))))
             try:
                 if json_out: j_output['Checksum'] =  pe.IMAGE_OPTIONAL_HEADER.CheckSum
-                else: print "Checksum\t%s" %(pe.IMAGE_OPTIONAL_HEADER.CheckSum)
+                else: print("Checksum\t%s" %(pe.IMAGE_OPTIONAL_HEADER.CheckSum))
             except AttributeError as e:
                 pass
 
             if not json_out:
-                print "Sections"
+                print("Sections")
             section_info = {}
             for section in pe.sections:
                 name = ""
                 # occasionally a nul sneaks in, don't print from the nul to eos
-                if "\0" in section.Name:
+                if "\0" in str(section.Name):
                     nul = section.Name.index("\0")
-                    name = section.Name[:nul]
+                    name = str(section.Name[:nul])
                 if json_out:
                     section_info[name] = {}
                     section_info[name]['VirtualAddress'] = hex(section.VirtualAddress) 
                     section_info[name]['VirtualSize'] = hex(section.Misc_VirtualSize)
                     section_info[name]['RawDataSize'] = hex(section.SizeOfRawData) 
-                else: print "\t%s %s %s %s" %(name, hex(section.VirtualAddress), hex(section.Misc_VirtualSize), section.SizeOfRawData)
+                else: print("\t{} {} {} {}".format(str(name), hex(section.VirtualAddress), hex(section.Misc_VirtualSize), section.SizeOfRawData))
             if json_out: j_output['Sections'] = section_info
 
             if not json_out:
-                print "Imports"
+                print("Imports")
             try:
                 import_info = {}
                 for entry in pe.DIRECTORY_ENTRY_IMPORT:
-                    if not json_out: print "\t" + entry.dll
+                    if not json_out: print("\t" + str(entry.dll) )
                     import_info[entry.dll] = {}
                     for imp in entry.imports:
                         if json_out:
                             import_info[entry.dll]['address'] = imp.address
-                            if imp.ordinal == None: import_info[entry.dll]['name'] = imp.name
+                            if imp.ordinal == None: import_info[entry.dll]['name'] = base64.encodeBase64String(imp.name)
                             else: import_info[entry.dll]['ordinal'] = imp.ordinal
-                        else: print '\t\t%s %s' %(hex(imp.address), (imp.name if imp.ordinal == None else "("+str(imp.ordinal)+")"))
+                        else: print('\t\t%s %s' %(hex(imp.address), (imp.name if imp.ordinal == None else "("+str(imp.ordinal)+")")))
                 if len(import_info) > 0:
                     j_output['Imports'] = import_info 
             except AttributeError as e:
-                if not json_out: print "\tNone"
+                if not json_out: print("\tNone")
 
             if not json_out:
-                print "Exports"
+                print("Exports")
             try:
                 export_info = {}
                 if len(pe.DIRECTORY_ENTRY_EXPORT.symbols) > 0:
@@ -228,22 +225,21 @@ def main():
                             export_info[exp.name] = {}
                             export_info[exp.name]['address'] = hex(exp.address)
                             export_info[exp.name]['ordinal'] = exp.ordinal
-                        else: print '\t\t%s %s (%s)' %(hex(exp.address), exp.name, exp.ordinal)
+                        else: print('\t\t%s %s (%s)' %(hex(exp.address), exp.name, exp.ordinal))
                     j_output['Exports'] = export_info
                 else:
-                    print "\tNone"
+                    print("\tNone")
             except AttributeError as e:
-                print "\tNone"
-
+                print("\tNone")
             sig_info = get_sig(file, pe, args.extract_sig)
             if sig_info:
                 if json_out:
                     j_output['Signature'] = sig_info
                 else:
-                    print "Digital Signature\n\t%s" + "\n\t".join(sig_info)
+                    print("Digital Signature\n\t%s" + "\n\t".join(sig_info))
 
             if args.disasm and not json_out:
-                print "Dissassembly"
+                print("Dissassembly")
 
         if args.disasm:
             asm = []
@@ -267,9 +263,9 @@ def main():
                     asm.append(t)
                 else: 
                     if args.terse:
-                        print "\t0x%x:\t%s\t%s" %(address, mnemonic, op_str)
+                        print("\t0x{}:\t{}\t{}".format(address, mnemonic, op_str))
                     else:
-                        print "0x%x:\t%s\t%s" %(address, mnemonic, op_str)
+                        print("0x{}:\t{}\t{}".format(address, mnemonic, op_str))
             if json_out:
                 j_output['Disassembly'] = asm
 
@@ -277,9 +273,9 @@ def main():
 
     if json_out:
         if args.pretty_print:
-            print json.dumps(file_json, sort_keys=True, indent=4, separators=(',',': '))
+            print(json.dumps(file_json, sort_keys=True, indent=4, separators=(',',': ')))
         else:
-            print json.dumps(file_json, separators=(',',':'))
+            print(json.dumps(file_json, separators=(',',':')))
 
     return
 
