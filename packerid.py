@@ -85,7 +85,7 @@ def main():
     if args.alt_db and (args.peid | args.show_all | args.show_matches):
         signatures = peutils.SignatureDatabase(args.alt_db)
     elif (args.peid | args.show_all | args.show_matches):
-        signatures = peutils.SignatureDatabase('userdb.txt')
+        signatures = peutils.SignatureDatabase('/usr/local/etc/userdb.txt')
     json_out = False
     if args.json_out:
         json_out = True
