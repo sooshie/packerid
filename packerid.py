@@ -31,22 +31,21 @@ import peutils
 import time
 import json
 import sys
+import base64
 from capstone import *
 from argparse import ArgumentParser
 
 def get_sig(filename, pe, extract):
     address = pe.OPTIONAL_HEADER.DATA_DIRECTORY[pefile.DIRECTORY_ENTRY['IMAGE_DIRECTORY_ENTRY_SECURITY']].VirtualAddress
     size = size = pe.OPTIONAL_HEADER.DATA_DIRECTORY[pefile.DIRECTORY_ENTRY['IMAGE_DIRECTORY_ENTRY_SECURITY']].Size
-
     if address == 0:
         return None
-
     retval = []
     if extract:
         with open(filename + ".der", 'wb+') as out:
             offset = address+8
             out.write(pe.write()[offset:offset+size])
-            retval.append("\t%s %s %s.der" %(hex(address), size, filename))
+            retval.append("\t{} {} {}.der".format(hex(address), size, filename))
     else:
         retval.append("\t%s %s" %(hex(address), size))
     return retval
@@ -187,15 +186,15 @@ def main():
             for section in pe.sections:
                 name = ""
                 # occasionally a nul sneaks in, don't print from the nul to eos
-                if "\0" in section.Name:
+                if "\0" in str(section.Name):
                     nul = section.Name.index("\0")
-                    name = section.Name[:nul]
+                    name = str(section.Name[:nul])
                 if json_out:
                     section_info[name] = {}
                     section_info[name]['VirtualAddress'] = hex(section.VirtualAddress) 
                     section_info[name]['VirtualSize'] = hex(section.Misc_VirtualSize)
                     section_info[name]['RawDataSize'] = hex(section.SizeOfRawData) 
-                else: print("\t{} {} {} {}".format(name, hex(section.VirtualAddress), hex(section.Misc_VirtualSize), section.SizeOfRawData))
+                else: print("\t{} {} {} {}".format(str(name), hex(section.VirtualAddress), hex(section.Misc_VirtualSize), section.SizeOfRawData))
             if json_out: j_output['Sections'] = section_info
 
             if not json_out:
@@ -203,12 +202,12 @@ def main():
             try:
                 import_info = {}
                 for entry in pe.DIRECTORY_ENTRY_IMPORT:
-                    if not json_out: print("\t" + entry.dll)
+                    if not json_out: print("\t" + str(entry.dll) )
                     import_info[entry.dll] = {}
                     for imp in entry.imports:
                         if json_out:
                             import_info[entry.dll]['address'] = imp.address
-                            if imp.ordinal == None: import_info[entry.dll]['name'] = imp.name
+                            if imp.ordinal == None: import_info[entry.dll]['name'] = base64.encodeBase64String(imp.name)
                             else: import_info[entry.dll]['ordinal'] = imp.ordinal
                         else: print('\t\t%s %s' %(hex(imp.address), (imp.name if imp.ordinal == None else "("+str(imp.ordinal)+")")))
                 if len(import_info) > 0:
@@ -232,7 +231,6 @@ def main():
                     print("\tNone")
             except AttributeError as e:
                 print("\tNone")
-
             sig_info = get_sig(file, pe, args.extract_sig)
             if sig_info:
                 if json_out:
@@ -265,9 +263,9 @@ def main():
                     asm.append(t)
                 else: 
                     if args.terse:
-                        print("\t0x%x:\t%s\t%s" %(address, mnemonic, op_str))
+                        print("\t0x{}:\t{}\t{}".format(address, mnemonic, op_str))
                     else:
-                        print("0x%x:\t%s\t%s" %(address, mnemonic, op_str))
+                        print("0x{}:\t{}\t{}".format(address, mnemonic, op_str))
             if json_out:
                 j_output['Disassembly'] = asm
 
